@@ -48,8 +48,8 @@ public struct SubscriptionProduct: Equatable, Sendable, Identifiable {
 
 public extension Array where Element == SubscriptionProduct {
     /// Sell order, supplied by the app — never alphabetical. Sorting by any string
-    /// property silently anchors the paywall on whatever wins lexicographically,
-    /// which shipped in Breath once ("…forever" beat "…monthly"). Products the
+    /// property silently anchors the paywall on whatever wins lexicographically
+    /// ("…forever" beats "…monthly", so the priciest plan leads). Products the
     /// order doesn't mention sink to the end instead of disappearing.
     func sorted(byIDOrder order: [String]) -> [SubscriptionProduct] {
         sorted {
