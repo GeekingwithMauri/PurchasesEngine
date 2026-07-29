@@ -1,0 +1,7 @@
+# Matches the TrackingEngine convention: build products and per-machine
+# resolution stay out; consumers pin their own dependency graph.
+.build/
+.swiftpm/
+Package.resolved
+xcuserdata/
+.DS_Store
