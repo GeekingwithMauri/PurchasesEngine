@@ -8,7 +8,8 @@ import Foundation
 /// sent a week of TestFlight sessions to a prod analytics project (2026-07-22).
 ///
 /// Every path, and where it lands:
-///   simulator / Xcode dev build     -> sandbox (DEBUG; carries no `receipt` either)
+///   simulator (any configuration)   -> sandbox (guarded explicitly, see below)
+///   Xcode dev build on device       -> sandbox (DEBUG)
 ///   Release scheme on device        -> sandbox (`sandboxReceipt`)
 ///   TestFlight                      -> sandbox (`sandboxReceipt`)
 ///   App Store download              -> production (`receipt`)
@@ -18,8 +19,15 @@ import Foundation
 public enum BuildEnvironment {
     /// True only for a real App Store download. A missing receipt URL counts as
     /// sandbox: a wrong guess must land in dev, never pollute production.
+    ///
+    /// The simulator needs its own guard, not just DEBUG: a Release scheme run in
+    /// the simulator has a receipt URL ending in plain `receipt` (only physical
+    /// devices get `sandboxReceipt`), so the receipt rule alone calls it a real
+    /// App Store install. That routed a Release-scheme simulator session to the
+    /// prod analytics project and read prod feature flags (found 2026-08-01) —
+    /// and no simulator can ever be a store install by definition.
     public static var isRealAppStoreInstall: Bool {
-        #if DEBUG
+        #if DEBUG || targetEnvironment(simulator)
         false
         #else
         Bundle.main.appStoreReceiptURL?.lastPathComponent == "receipt"
