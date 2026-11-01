@@ -62,6 +62,9 @@ public extension Array where Element == SubscriptionProduct {
 public enum SubscriptionError: Error, Equatable {
     case purchaseCancelled
     case unavailable
+    /// The payment is awaiting approval (Ask to Buy, deferred payment). Nothing was
+    /// granted yet; the entitlement updates if the approval lands.
+    case purchasePending
 }
 
 /// Facade over the payment provider (RevenueCat in production). The rest of the
@@ -72,6 +75,17 @@ public protocol SubscriptionGateway: Sendable {
     func products() async throws -> [SubscriptionProduct]
     func purchase(_ product: SubscriptionProduct) async throws
     func restore() async throws
+    /// Ties purchases to the app's own durable user id. Default: does nothing.
+    func identify(_ appUserID: String) async throws
+    /// Store product identifiers of the one-time purchases (consumables and
+    /// non-consumables) on record. One entry per transaction, so a consumable bought
+    /// twice appears twice. Default: `[]`.
+    func purchasedOneTimeProductIDs() async throws -> [String]
+}
+
+public extension SubscriptionGateway {
+    func identify(_ appUserID: String) async throws {}
+    func purchasedOneTimeProductIDs() async throws -> [String] { [] }
 }
 
 /// Tests, previews and UI-test runs. Purchases succeed instantly.

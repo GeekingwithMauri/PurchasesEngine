@@ -112,6 +112,28 @@ for await entitlement in gateway.entitlementUpdates {
 month" caption adds information (yearly) versus repeats the button (monthly) —
 computed from the store's own formatted strings, no currency parsing.
 
+### One-time products
+
+Consumables and non-consumables sit next to the entitlement. If you key purchases
+to your own durable user id, pass it at configure time, or switch later:
+
+```swift
+let gateway = RevenueCatGateway(
+    apiKey: key, entitlementID: "premium", productOrder: order,
+    appUserID: myDurableUserID // optional; nil keeps RevenueCat's anonymous id
+)
+try await gateway.identify(myDurableUserID) // later, e.g. after sign-in
+
+// One entry per transaction: a consumable bought twice appears twice.
+let owned = try await gateway.purchasedOneTimeProductIDs() // ["myapp.coins.small", …]
+
+do { try await gateway.purchase(product) }
+catch SubscriptionError.purchasePending { showAwaitingApproval() } // Ask to Buy
+```
+
+`identify` and `purchasedOneTimeProductIDs` default to a no-op and `[]` on the
+protocol, so existing conformers keep compiling.
+
 ### 4. Tests, previews and UI tests run on the fake
 
 ```swift
