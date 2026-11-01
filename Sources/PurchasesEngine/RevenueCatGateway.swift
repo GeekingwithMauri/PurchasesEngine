@@ -23,11 +23,19 @@ public final class RevenueCatGateway: SubscriptionGateway, @unchecked Sendable {
         apiKey: String,
         entitlementID: String,
         productOrder: [String],
-        amplitudeDeviceId: String? = nil
+        amplitudeDeviceId: String? = nil,
+        appUserID: String? = nil
     ) {
         self.entitlementID = entitlementID
         self.productOrder = productOrder
-        Purchases.configure(withAPIKey: apiKey)
+        if let appUserID {
+            Purchases.configure(
+                withAPIKey: apiKey,
+                appUserID: appUserID
+            )
+        } else {
+            Purchases.configure(withAPIKey: apiKey)
+        }
         if let amplitudeDeviceId {
             Purchases.shared.attribution.setAttributes(["$amplitudeDeviceId": amplitudeDeviceId])
         }
@@ -92,9 +100,23 @@ public final class RevenueCatGateway: SubscriptionGateway, @unchecked Sendable {
         guard let package = lock.withLock({ packagesByProduct[product.id] }) else {
             throw SubscriptionError.unavailable
         }
-        let result = try await Purchases.shared.purchase(package: package)
+        let result: PurchaseResultData
+        do {
+            result = try await Purchases.shared.purchase(package: package)
+        } catch let error as ErrorCode where error == .paymentPendingError {
+            throw SubscriptionError.purchasePending
+        }
         if result.userCancelled { throw SubscriptionError.purchaseCancelled }
         update(from: result.customerInfo)
+    }
+
+    public func identify(_ appUserID: String) async throws {
+        update(from: try await Purchases.shared.logIn(appUserID).customerInfo)
+    }
+
+    /// One entry per transaction: a consumable bought twice appears twice.
+    public func purchasedOneTimeProductIDs() async throws -> [String] {
+        try await Purchases.shared.customerInfo().nonSubscriptions.map(\.productIdentifier)
     }
 
     public func restore() async throws {

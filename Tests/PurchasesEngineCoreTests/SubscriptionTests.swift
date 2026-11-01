@@ -119,3 +119,31 @@ private let catalog = [
         #expect(gateway.entitlement == .free)
     }
 }
+
+/// Implements only the required members, each flipping a flag, so a default that
+/// quietly routes into one of them is caught.
+private final class BareGateway: SubscriptionGateway, @unchecked Sendable {
+    var touchedRequiredMember = false
+    var entitlement: Entitlement { touchedRequiredMember = true; return .free }
+    var entitlementUpdates: AsyncStream<Entitlement> {
+        touchedRequiredMember = true
+        return AsyncStream { $0.finish() }
+    }
+    func products() async throws -> [SubscriptionProduct] { touchedRequiredMember = true; return [] }
+    func purchase(_ product: SubscriptionProduct) async throws { touchedRequiredMember = true }
+    func restore() async throws { touchedRequiredMember = true }
+}
+
+@Suite struct DefaultImplementationTests {
+    @Test func identifyDefaultCompletesWithoutTouchingRequiredMembers() async throws {
+        let gateway = BareGateway()
+        try await gateway.identify("user-1")
+        #expect(!gateway.touchedRequiredMember)
+    }
+
+    @Test func oneTimeProductsDefaultIsEmptyWithoutTouchingRequiredMembers() async throws {
+        let gateway = BareGateway()
+        #expect(try await gateway.purchasedOneTimeProductIDs() == [])
+        #expect(!gateway.touchedRequiredMember)
+    }
+}
