@@ -30,9 +30,16 @@ public enum BuildEnvironment {
         #if DEBUG || targetEnvironment(simulator)
         false
         #else
-        Bundle.main.appStoreReceiptURL?.lastPathComponent == "receipt"
+        receiptURL?.lastPathComponent == "receipt"
         #endif
     }
+
+    /// `Bundle.appStoreReceiptURL` through Key-Value Coding: the Swift symbol is
+    /// deprecated since iOS 18 for StoreKit 2's `AppTransaction`, which is `async`,
+    /// and this answer is needed synchronously at launch. Same getter, same value,
+    /// no deprecation warning in consumers that build with warnings as errors.
+    // ponytail: KVC bridge over a deprecated getter, replaced by a StoreKit 2 migration
+    static var receiptURL: URL? { Bundle.main.value(forKey: "appStoreReceiptURL") as? URL }
 
     /// The crash reporter's `environment` tag. Without it every beta crash lands
     /// in the same issue stream as real users', indistinguishable.
